@@ -14,4 +14,18 @@ Para garantir que o projeto rode isolado e sem conflitos de dependência (como p
    ```bash
    git clone [https://github.com/seu-usuario/MLCEERMA.git](https://github.com/seu-usuario/MLCEERMA.git)
    cd MLCEERMA
-2. Ative o venv e baixe o os requirements .txt
+   
+2. Crie e Ative o venv
+   ```bash
+   python3 -m venv env
+   source env/bin/activate
+   
+3. Ative o venv e baixe o os requirements .txt
+   ```bash
+   pip install -r requirement.txt
+
+4. As vezes o código pega o PythonPath que é os arquivos generalizados do os
+   ```bash
+   unset PYTHONPATH
+
+5. Pronto, pode rodar leve.
