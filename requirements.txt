@@ -24,6 +24,7 @@ openpyxl==3.1.5
 packaging==26.2
 pandas==3.0.5
 parso==0.8.7
+pathlib==1.0.1
 pexpect==4.9.0
 pillow==12.3.0
 platformdirs==4.11.5
@@ -33,6 +34,9 @@ ptyprocess==0.7.0
 pure_eval==0.2.3
 Pygments==2.21.0
 pyparsing==3.3.2
+PyQt5==5.15.11
+PyQt5-Qt5==5.15.19
+PyQt5_sip==12.19.0
 python-dateutil==2.9.0.post0
 pyzmq==27.2.0
 scikit-learn==1.9.0
