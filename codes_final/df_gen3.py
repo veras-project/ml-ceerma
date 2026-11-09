@@ -1,71 +1,61 @@
 import pandas as pd
 import numpy as np
 from pathlib import Path
+import re
 from sklearn.metrics import classification_report, accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-import matplotlib.pyplot as plt
-import seaborn as sns
+
 
 # 1. Configurações Iniciais
-# Facilitará a alteração para os Experimentos 4 e 5 com os outros sensores
-CAMINHO_BASE = Path('../datasetventoinha/Experimento3')
+CAMINHO_BASE = Path('../content/drive/MyDrive/Temp')
 TAMANHO_JANELA_MS = 333
-RANDOM_SEED = 78
+RANDOM_SEED = 67
 
 lista_dfs = []
 
-# 2. Iterar por todas as subpastas e ficheiros dinamicamente
-
-classes_validas = [
-    '1 - Pá quebrada por um quarto',
-    '2 - Pá com um oitavo de quebra',
-    '3 - Pá quebrada pela metade',
-    '4 - Pá desbalanceada',
-    '5 - Sem falhas',
-    '6 - Pá quebrada totalmente',
-    '7 - Pá com micro quebra'
-]
-
+# 2. Iteração e Limpeza
 for id_coleta, ficheiro in enumerate(CAMINHO_BASE.rglob('*.xlsx')):
     try:
         df_temp = pd.read_excel(ficheiro)
-        
+
         nome_pasta = ficheiro.parent.name
-        nome_arquivo = ficheiro.stem # Nome do ficheiro sem a extensão .xlsx
-        
-        # Se o nome da pasta for uma das classes conhecidas, usamos a pasta
-        if nome_pasta in classes_validas:
-            nome_classe = nome_pasta
+        nome_arquivo = ficheiro.stem
+
+        if "coleta" in nome_arquivo.lower():
+            nome_bruto = nome_pasta
         else:
-            nome_classe = nome_arquivo
-            
-        df_temp['classificacao'] = nome_classe
-        df_temp['id_coleta'] = id_coleta 
-        
+            nome_bruto = nome_arquivo
+
+        # Limpeza para o Machine Learning (remove números e hifens)
+        nome_limpo = re.sub(r'^\d+\s*-\s*', '', nome_bruto)
+        nome_classe_ml = nome_limpo.strip().capitalize()
+
+        # Guarda ambas as informações
+        df_temp['nome_original'] = nome_bruto      # Para a sua tabela (ex: 1 - Sem falhas)
+        df_temp['classificacao'] = nome_classe_ml  # Para o modelo (ex: Sem falhas)
+        df_temp['id_coleta'] = id_coleta
+
         lista_dfs.append(df_temp)
 
-    
-        
     except Exception as e:
         print(f"Erro ao ler o ficheiro {ficheiro.name}: {e}")
-        
-if not lista_dfs:
-    raise ValueError("Nenhum ficheiro Excel foi encontrado ou lido com sucesso. Reveja")
 
-# 3. Junta todos os DataFrames carregados num só
+if not lista_dfs:
+    raise ValueError("Nenhum ficheiro Excel foi encontrado. Verifique o caminho base.")
+
+# 3. Junta tudo
 df_unificado = pd.concat(lista_dfs, ignore_index=True)
 
-# 4. Garante que Tempo_ms seja numérico e cria a janela de tempo
+# 4. Formatação de Tempo
 df_unificado['Tempo_ms'] = pd.to_numeric(df_unificado['Tempo_ms'], errors='coerce')
 df_unificado = df_unificado.dropna(subset=['Tempo_ms'])
-
-# Cria a coluna ID_Janela
 df_unificado['ID_Janela'] = (df_unificado['Tempo_ms'] // TAMANHO_JANELA_MS).astype(int)
 
-# 5. Extração das Features (Agrupamento por classificação, id_coleta e ID_Janela)
+# 5. Extração das Features
+# Adicionamos 'nome_original' no groupby para não o perder
 df_features = (
-    df_unificado.groupby(['classificacao', 'id_coleta', 'ID_Janela'])
+    df_unificado.groupby(['classificacao', 'nome_original', 'id_coleta', 'ID_Janela'])
     .agg(
         Ax_Mean=('Ax_g', 'mean'),
         Ax_Std=('Ax_g', 'std'),
@@ -83,20 +73,19 @@ df_features = (
     .reset_index()
 )
 
-# Removemos linhas com NaN (ex: janelas com apenas 1 amostra onde o desvio padrão é NaN)
 df_features = df_features.dropna().reset_index(drop=True)
-print("Dimensão do dataset final de features:", df_features.shape)
 
-# 6. Preparação das variáveis X e y
-# Removemos as colunas de identificação para não enviesar o modelo
-X = df_features.drop(columns=['classificacao', 'id_coleta', 'ID_Janela'])
+# 6. Preparação para o Machine Learning
+# Removemos todas as colunas de texto/identificação do X
+X = df_features.drop(columns=['classificacao', 'nome_original', 'id_coleta', 'ID_Janela'])
+# O Y recebe apenas a classificação limpa, avaliando as origens diferentes como uma classe só
 y = df_features['classificacao']
 
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.20, random_state=RANDOM_SEED, stratify=y
 )
 
-# 7. Treino e avaliação com RandomForest
+# 7. Treino e Avaliação
 rf_model = RandomForestClassifier(n_estimators=100, random_state=RANDOM_SEED)
 rf_model.fit(X_train, y_train)
 
@@ -108,34 +97,59 @@ print("Relatório de Classificação:\n")
 print(classification_report(y_test, y_pred))
 
 
-#Parte Gráfica.
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
 
-
-# 1. Configura o estilo e o tamanho da imagem
-plt.figure(figsize=(10, 6))
+# ==========================================
+# 1. GRÁFICO DE DISPERSÃO (DATA DISPOSITION)
+# ==========================================
+plt.figure(figsize=(12, 7))
 sns.set_theme(style="whitegrid")
 
-# 2. Cria o Gráfico de Dispersão (Scatter Plot)
-# x e y: Escolhemos o Desvio Padrão de X e Y como exemplo
-# hue: Colore os pontos automaticamente baseando-se na coluna 'classificacao'
+# Usamos 'nome_original' no hue para você ver cada coleta/posição com uma cor única.
+# A paleta 'tab20' suporta até 20 cores diferentes, ideal para muitos ficheiros.
 sns.scatterplot(
-    data=df_features, 
-    x='Ax_Std', 
-    y='Ay_Std', 
-    hue='classificacao', 
-    palette='tab10',  # Paleta com cores bem distintas
-    alpha=0.7,        # Deixa os pontos levemente transparentes (ajuda a ver sobreposições)
-    s=60              # Tamanho dos pontos
+    data=df_features,
+    x='Ax_Std',
+    y='Ay_Std',
+    hue='nome_original',
+    palette='tab20',
+    alpha=0.7,
+    s=50
 )
 
-# 3. Adiciona títulos e rótulos aos eixos
-plt.title('Dispersão das Vibrações: Eixo X vs Eixo Y', fontsize=14, pad=15)
+plt.title('Dispersão das Vibrações por Coleta (Eixo X vs Eixo Y)', fontsize=14, pad=15)
 plt.xlabel('Vibração no Eixo X (Desvio Padrão)', fontsize=12)
 plt.ylabel('Vibração no Eixo Y (Desvio Padrão)', fontsize=12)
 
-# 4. Ajusta a legenda para ficar fora do gráfico e não cobrir os pontos
-plt.legend(title='Tipo de Falha (Legenda)', bbox_to_anchor=(1.05, 1), loc='upper left')
+# Coloca a legenda fora do gráfico para não tampar os dados
+plt.legend(title='Origem do Dado', bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=9)
+plt.tight_layout()
+plt.show()
 
-# 5. Ajusta o layout para nada ficar cortado e exibe o gráfico
+
+# ==========================================
+# 2. MATRIZ DE CONFUSÃO (CONFUSION MATRIX)
+# ==========================================
+plt.figure(figsize=(10, 8))
+
+# Calcula a matriz usando as variáveis de teste e previsão geradas anteriormente
+cm = confusion_matrix(y_test, y_pred, labels=rf_model.classes_)
+
+# Cria o mapa de calor (heatmap) para a matriz
+sns.heatmap(
+    cm,
+    annot=True,        # Mostra os números dentro dos quadrados
+    fmt='d',           # Formata como número inteiro
+    cmap='Blues',      # Esquema de cores (azul facilita a leitura)
+    xticklabels=rf_model.classes_,
+    yticklabels=rf_model.classes_
+)
+
+plt.title('Matriz de Confusão - Random Forest', fontsize=14, pad=15)
+plt.xlabel('Previsão do Modelo (O que a IA achou que era)', fontsize=12)
+plt.ylabel('Classe Real (O que realmente era)', fontsize=12)
+plt.xticks(rotation=45, ha='right') # Inclina os nomes embaixo para não encavalarem
 plt.tight_layout()
 plt.show()
