@@ -1,0 +1,33 @@
+REUNIÃO 1
+
+    # Experimento Número 3: "coleta posição
+    número 1 é o teste completo com o ventilador 
+    apenas na posição 1, ou seja, só tem um ventilador rodando por rodada"
+
+    #"posições diferentes e posições diferentes 2. São todos acopladas, mas não está 
+    ligada"
+
+    #Experimento Número 4: "Gy-521 outro tipo de acelerometo semelhante ao mpu9050. A ideia
+    de tiago é ver as diferentes fontes de coleta. Bom da uma olhada nos datasheets de ambos.
+    para ver se tem alguma consequencia. Qual dos dois passam as melhores informações para 
+    treina o meu modelo"
+
+    #vk701h+ ele consegue coletar mais dados do que o arduíno. Nesse coletor consegue colocar 
+    filtros de dados. 60c301 é diferente dos dois acima. É um acelerômetro mais caro e 
+    coleta mais os arquivos que estão dentro são diferentes. É outro formato 
+
+    #Experimento número 5: o pwm medição por largura de pulso.   
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+REUNIÃO 2
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+REUNIÃO 3
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+REUNIÃO 4
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+REUNIÃO 5
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
