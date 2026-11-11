@@ -6,12 +6,27 @@ from sklearn.metrics import classification_report, accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 
+import re
 
-# 1. Configurações Iniciais
-CAMINHO_BASE = Path('../content/drive/MyDrive/Temp')
+def limpar_e_capitalizar_primeira_letra(texto):
+    
+    texto_limpo = re.sub(r'\s+', ' ', str(texto)).strip()
+
+    match = re.search(r'[a-zA-ZÀ-ÿ]', texto_limpo)
+    
+    if match:
+        pos = match.start()
+        # Mantém o prefixo (ex: "7 - "), força a 1ª letra a maiúscula e o resto a minúsculas
+        return texto_limpo[:pos] + texto_limpo[pos].upper() + texto_limpo[pos+1:].lower()
+    
+    return texto_limpo
+
+
+# 1. Configurações Iniciais 
+
+CAMINHO_BASE = Path('datasetventoinha/Experimento3') #MANO MECHE NISSO PELO A MOR DE DEUS E POR FAVOR LEMBRA DE MEXER NO TERMINAL DE ONDE ESTÁ RODANDO O PROGRAMA
 TAMANHO_JANELA_MS = 333
 RANDOM_SEED = 67
-
 lista_dfs = []
 
 # 2. Iteração e Limpeza
@@ -22,14 +37,18 @@ for id_coleta, ficheiro in enumerate(CAMINHO_BASE.rglob('*.xlsx')):
         nome_pasta = ficheiro.parent.name
         nome_arquivo = ficheiro.stem
 
-        if "coleta" in nome_arquivo.lower():
+        if "coleta" in nome_arquivo.lower(): #Esse if Cuida das variações de formatação do tipo do arquivo passado.
             nome_bruto = nome_pasta
         else:
             nome_bruto = nome_arquivo
 
-        # Limpeza para o Machine Learning (remove números e hifens)
+
         nome_limpo = re.sub(r'^\d+\s*-\s*', '', nome_bruto)
         nome_classe_ml = nome_limpo.strip().capitalize()
+
+        print(nome_bruto)
+        nome_bruto=capitalizar_primeira_letra(nome_bruto)
+        print(nome_bruto)
 
         # Guarda ambas as informações
         df_temp['nome_original'] = nome_bruto      # Para a sua tabela (ex: 1 - Sem falhas)
